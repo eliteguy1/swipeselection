@@ -33,6 +33,25 @@
 /// iOS 7 Task Execution
 @class UIKeyboardTaskExecutionContext;
 
+@interface UIKeyboardTaskQueue : NSObject
+@property(retain, nonatomic) UIKeyboardTaskExecutionContext *executionContext;
+
+-(BOOL)isMainThreadExecutingTask;
+-(void)performTask:(id)arg1;
+-(void)waitUntilAllTasksAreFinished;
+-(void)addDeferredTask:(id)arg1;
+-(void)addTask:(id)arg1;
+-(void)promoteDeferredTaskIfIdle;
+-(void)performDeferredTaskIfIdle;
+-(void)performTaskOnMainThread:(id)arg1 waitUntilDone:(void)arg2;
+-(void)finishExecution;
+-(void)continueExecutionOnMainThread;
+-(void)unlock;
+-(BOOL)tryLockWhenReadyForMainThread;
+-(void)lockWhenReadyForMainThread;
+-(void)lock;
+@end
+
 @interface UIKeyboardTaskExecutionContext : NSObject
 @property(readonly, nonatomic) UIKeyboardTaskQueue *executionQueue;
 

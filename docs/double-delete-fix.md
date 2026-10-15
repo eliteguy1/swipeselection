@@ -31,11 +31,19 @@ Local (Windows, `D:\llama agent\tweak\swipeselection`):
 
 ## 4. Build Diagnostics & Warnings
 
-PENDING — macOS VM unreachable (`ssh` timeout). Not built, no Logos/clang output yet.
+- VM `macOS 14.vmx` was down; started via `vmrun -T player start nogui`, SSH up after boot.
+- `make package` round 1: 7 errors. 1 real (transcription dropped the whole `@interface UIKeyboardTaskQueue` block — restored from verified original source) + 6 `-Werror` deprecation errors under SDK 26.0 (`setTargetRect:inView:`, `setMenuVisible:animated:`, `UI_USER_INTERFACE_IDIOM()`, `UITextWritingDirectionRightToLeft`, plus 2 cascade errors from the missing interface). Fix: `-Wno-error=deprecated-declarations` in `SwipeSelection_CFLAGS` (warnings kept, logic untouched).
+- Round 2: compiles clean (0 errors; 4 deprecation warnings, harmless — same calls as original). Link ok both slices. Signing failed: `ldid: command not found` — resolved via `export PATH='/usr/local/bin:/opt/homebrew/bin:...'` (`ldid` lives in `/usr/local/bin`, missing from non-interactive ssh PATH).
+- Scheme: first built rootless (`iphoneos-arm64`, `-1+debug`); switched to `THEOS_PACKAGE_SCHEME=roothide` + `FINALPACKAGE=1` to match original 2.0 packaging (`iphoneos-arm64e`, release). Theos does not emit `.roothidepatch`, so a zero-byte marker was added via `src/layout/` to replicate the original package (VERIFIED present in 2.0 deb).
+- Linker: `ld: warning: -multiply_defined is obsolete` (benign, theos default flag).
 
 ## 5. Artifact Integrity
 
-PENDING — no `.deb` produced yet.
+- `build/com.icraze.swipeselection_2.0.1_iphoneos-arm64e.deb`, 7,730 bytes.
+- SHA256 `9690553196380cc74387bc7bbb83e96476bb8e09fb663c8f5813fe41192c0586` — identical local vs VM (VERIFIED).
+- FAT dylib: `arm64 arm64e` (VERIFIED via `lipo -info`).
+- `data.tar.*` members: `SwipeSelection.dylib`, `SwipeSelection.dylib.roothidepatch` (0-byte), `SwipeSelection.plist` — matches original 2.0 layout.
+- control: `Version: 2.0.1`, `Architecture: iphoneos-arm64e`, UIKit-bundles filter unchanged.
 
 ## 6. Impact & Regression Risks
 
