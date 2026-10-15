@@ -63,3 +63,20 @@ Local (Windows, `D:\llama agent\tweak\swipeselection`):
 - 2.0.2 changes (minimal deltas toward 2.0 fidelity): `+initWithFrame:forCustomInputView:` hook (pan install on the modern init path — without it the gesture may never install on iOS 16+), restored `Pre-Depends: rootless-compat(>= 0.9)` in control. The iCraze extras (word-delete counter, TextSelectionInteraction yield, kana check, SS_pan property) intentionally NOT reimplemented (touch-time features, unrelated to load crash; HYPOTHESIS).
 - Artifact: `build/com.icraze.swipeselection_2.0.2_iphoneos-arm64e.deb`, SHA256 `bf9caa59b04de80edb218b39e30812358e6ba82491f6e64e0e4a3caf91f8eb56` (VERIFIED local vs VM). 0 errors, same 4 deprecation warnings. On-device test PENDING.
 - If 2.0.2 also safe-modes: pull `SpringBoard-*.ips` (faulting frame decides ctor-hook vs packaging) and check free storage + `dpkg --configure -a` state.
+
+## 8. Root Cause of 2.0.1 Safe Mode (VERIFIED from SpringBoard crash log)
+
+User provided `SpringBoard-2026-10-15-15:47:50` (incident `3486D5A3`, EXC_CRASH/SIGABRT). Faulting thread frames (innermost first):
+
+```text
+__abort_with_payload / abort_with_payload
+  <- roothidepatch.dylib +31856 / +31616  (imageIndex 10 = /usr/lib/roothidepatch.dylib, 32KB)
+  <- dyld4 ReadOnlyCallback / notifyLoad
+  <- dlopen_from <- injection_init (libinjector.dylib) <- systemhook initializer
+```
+
+- The abort fires inside RootHide's `roothidepatch.dylib` load-notify callback while `libinjector` dlopens tweaks at SpringBoard launch. No SwipeSelection/tweak frames, no MSHook frames — our hook code never ran. Hook selection is EXONERATED (again).
+- Trigger: the zero-byte `SwipeSelection.dylib.roothidepatch` marker file I added to 2.0.1's package (copied from 2.0's layout without understanding it). The marker declares the binary as roothide-patched; our binary was never patched (theos does not run the patcher), so the loader-side verification/patch step aborts the whole process.
+- Corroboration: theos-built markerless dylibs load fine on this device (our keyboard `SlyderOptimizer` 1.3.x, daily use, no safe mode). Original 2.0 (marker + genuinely patched bytes) also loads fine.
+- Claim status: `abort originates in roothidepatch.dylib during injection dlopen` = VERIFIED (crash frames); `fabricated marker caused it` = HYPOTHESIS (strong — sole differentiator vs working theos builds); `2.0.3 without marker loads` = OPEN ISSUE (on-device test pending).
+- Fix: 2.0.3 removes the marker (`src/layout/` deleted). Artifact: `build/com.icraze.swipeselection_2.0.3_iphoneos-arm64e.deb`, SHA256 `198abfae078cd70184bcb6f095e8113f542e24f57c2f8fd551b2f7917c11e757` (VERIFIED local vs VM). `data.tar` members: dylib + plist only. 2.0.2 (with marker) is superseded and must NOT be installed.

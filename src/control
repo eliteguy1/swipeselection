@@ -6,5 +6,5 @@ Maintainer: iCraze
 Author: Kyle Howells
 Section: Tweaks
 Architecture: iphoneos-arm64e
-Version: 2.0.2
+Version: 2.0.3
 Pre-Depends: rootless-compat(>= 0.9)
