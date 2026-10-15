@@ -12,11 +12,11 @@
 
 ## Current State (2026-10-15)
 
-- `src/control` Version: **2.0.1** (was 2.0). One functional fix, patch increment.
+- `src/control` Version: **2.0.2** (was 2.0). 2.0.1 safe-moded SpringBoard (cause undetermined — hooks exonerated, see docs §7); 2.0.2 = delete fix + modern init hook + Pre-Depends restored.
 - Bug: tap on backspace deletes exactly 2 chars on iOS 18.7.1.
 - Cause: legacy manual `[kb handleDelete]` re-fire in `touchesEnded` duplicates the system's own tap-delete (modern layout/`handleDeleteWithNonZeroInputCount` path). Fix = removed the re-fire.
 - `src/` built from verified original source (`kylehowells/SwipeSelection`, `Tweak.mm`) with the single fix. iCraze 2.0's extra word-delete-counter logic NOT carried over (no source, not reinvented) — verify on-device.
-- Build: DONE 2026-10-15 — `build/com.icraze.swipeselection_2.0.1_iphoneos-arm64e.deb` (7,730 B, roothide/arm64e, SHA verified). On-device test PENDING.
+- Build: DONE 2026-10-15 — `build/com.icraze.swipeselection_2.0.2_iphoneos-arm64e.deb` (roothide/arm64e, SHA `bf9caa59...f8eb56` verified). On-device test PENDING.
 - Details: `docs/double-delete-fix.md` (6-section report).
 
 ## Layout

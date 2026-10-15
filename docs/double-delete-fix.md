@@ -51,4 +51,15 @@ Local (Windows, `D:\llama agent\tweak\swipeselection`):
 - Single-tap delete: expected 1 char (was 2). If 0 chars appear on-device, the system path assumption is wrong for that app — report immediately (would mean re-adding a guarded manual call).
 - Hold-delete repeat: expected unchanged continuous delete. Watch for: repeat stopping after 1 char (would indicate the removed block was load-bearing — unlikely per guard analysis).
 - Swipe-cursor / shift-select / more-key suppression: untouched code paths, but verify cursor movement + 2-finger word skip still work since the file was retranscribed.
-- On-device observation: type `abcd`, tap backspace once → expect `abc`; hold backspace → continuous delete; swipe on keyboard → cursor moves, no characters deleted.
+## 7. 2.0.1 Safe-Mode Regression (2026-10-15) + 2.0.2
+
+- 2.0.1 installed -> respring -> SpringBoard safe mode. Uninstalled; phone recovered. The `apt-get` crash log the user provided is a SEPARATE event (package-manager abort inside `DoInstall`/`writeData:` while REMOVING 2.0.1, bug_type 309) — not the SpringBoard cause.
+- 2.0's EXACT hook set recovered from static analysis (VERIFIED: capstone disasm of arm64e slice + `dyld_info -fixups` selref->`__objc_methname` mapping + cstring cross-check):
+  - `UIKeyboardImpl`: `initWithFrame:`, `initWithFrame:forCustomInputView:` (NEW vs Kyle), `isLongPress`, `handleDelete`, `handleDeleteAsRepeat:executionContext:`, plus `%new` `SS_KeyboardGestureDidPan:`, `SS_revealSelection:` and an `SS_pan` associated property (`setSS_pan:`/`SS_pan`, `class_addProperty`).
+  - `UIKeyboardLayoutStar`: `touchesBegan/Moved/Cancelled/Ended:withEvent:`, plus `%new` `SS_shouldSelect`, `SS_disableSwipes`, `SS_isKanaKey`.
+  - `_UIKeyboardTextSelectionInteraction`: `gestureRecognizerShouldBegin:` (NEW vs Kyle — yields our pan to Apple's selection interaction).
+  - NOT hooked (neither 2.0 nor Kyle): `handleDeleteAsRepeat:` (2-arg), `handleDeleteWithNonZeroInputCount`, `deleteAction`, `stopAutoDelete`.
+- Consequence: 2.0.1's hook set is a SUBSET of working 2.0's. A missing hook cannot crash; therefore the safe-mode cause is NOT the hook selection. Remaining suspects (OPEN ISSUE, needs device evidence): toolchain/packaging delta (SDK 26.0 vs 16.2, theos `@rpath` install_name vs absolute, dm.pl tar layout) or device state (the later apt abort suggests possible disk/dpkg distress around the same window).
+- 2.0.2 changes (minimal deltas toward 2.0 fidelity): `+initWithFrame:forCustomInputView:` hook (pan install on the modern init path — without it the gesture may never install on iOS 16+), restored `Pre-Depends: rootless-compat(>= 0.9)` in control. The iCraze extras (word-delete counter, TextSelectionInteraction yield, kana check, SS_pan property) intentionally NOT reimplemented (touch-time features, unrelated to load crash; HYPOTHESIS).
+- Artifact: `build/com.icraze.swipeselection_2.0.2_iphoneos-arm64e.deb`, SHA256 `bf9caa59b04de80edb218b39e30812358e6ba82491f6e64e0e4a3caf91f8eb56` (VERIFIED local vs VM). 0 errors, same 4 deprecation warnings. On-device test PENDING.
+- If 2.0.2 also safe-modes: pull `SpringBoard-*.ips` (faulting frame decides ctor-hook vs packaging) and check free storage + `dpkg --configure -a` state.

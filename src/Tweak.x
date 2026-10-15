@@ -322,6 +322,23 @@ Class AKFlickGestureRecognizer(){
 	return orig;
 }
 
+// FORK 2.0.2: modern iOS creates UIKeyboardImpl via
+// initWithFrame:forCustomInputView: (hook VERIFIED present in working 2.0
+// binary: UIKeyboardImpl.initWithFrame:forCustomInputView: -> 0x48F0).
+// Without this the pan gesture is never installed on iOS 16+.
+-(id)initWithFrame:(CGRect)rect forCustomInputView:(UIView*)customInputView{
+	id orig = %orig;
+
+	if (orig){
+		SSPanGestureRecognizer *pan = [[SSPanGestureRecognizer alloc] initWithTarget:self action:@selector(SS_KeyboardGestureDidPan:)];
+		pan.cancelsTouchesInView = NO;
+		[self addGestureRecognizer:pan];
+		[pan release];
+	}
+
+	return orig;
+}
+
 %new
 -(void)SS_KeyboardGestureDidPan:(UIPanGestureRecognizer*)gesture{
 	// Location info (may change)
